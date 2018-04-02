@@ -1,0 +1,49 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pojo.mapper.LanshiPriceMapper">
+
+    <update id="updatePriceAndFlag" parameterType="java.util.List">
+        <foreach item="lanshiPrice" collection="list" separator=";">
+        update lanshiprice set
+            beyond100 = #{lanshiPrice.beyond100}, flag = #{lanshiPrice.flag}
+        where flight = #{lanshiPrice.flight} and dest like concat('%',#{lanshiPrice.dest},'%')
+        </foreach>
+    </update>
+
+    <select id="selectPrice" parameterType="lanshiPrice" resultType="lanshiPrice">
+        SELECT * FROM lanshiprice WHERE 1=1
+        <if test="flag != null">
+            AND flag = #{flag}
+        </if>
+    </select>
+
+    <select id="selectPriceByFlight" parameterType="lanshiPrice" resultType="lanshiPrice">
+        SELECT * FROM lanshiprice WHERE flight = #{flight} AND dest LIKE concat('%',#{dest},'%')
+    </select>
+
+    <select id="selectPriceByOther" parameterType="hashmap" resultType="lanshiPrice">
+        SELECT * FROM lanshiprice WHERE flight REGEXP CONCAT(#{eCode},'[所有|其]+') AND dest LIKE CONCAT('%',#{dest},'%');
+    </select>
+
+    <insert id="insertPrices" parameterType="java.util.List" >
+        insert into lanshiprice (dest,flight,beyond100,under100) values
+        <foreach item="lanshiPrice" collection="list" separator=",">
+            (#{lanshiPrice.dest},#{lanshiPrice.flight},#{lanshiPrice.beyond100},#{lanshiPrice.under100})
+        </foreach>
+    </insert>
+
+    <update id="updatePrices" parameterType="java.util.List">
+        <foreach item="lanshiPrice" collection="list" separator=";">
+            update lanshiprice set
+            beyond100 = #{lanshiPrice.beyond100}
+            where flight = #{airline.flight} and dest like concat('%',#{airline.dest},'%')
+        </foreach>
+    </update>
+
+    <update id="truncatePrice">
+        truncate TABLE lanshiprice;
+    </update>
+
+</mapper>

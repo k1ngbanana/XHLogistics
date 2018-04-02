@@ -1,0 +1,40 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pojo.mapper.AirlineMapper">
+
+     <resultMap type="pojo.Airline" id="airline">
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+
+    <select id="selectAirline" parameterType="airline" resultMap="airline">
+		select * from airline where flight = #{flight} and dest like concat('%',#{dest},'%')
+	</select>
+
+    <insert id="insertAirlines" parameterType="java.util.List" >
+        insert into airline values
+        <foreach item="airline" collection="list" separator=",">
+            (#{airline.flight},#{airline.company},#{airline.departure},
+            #{airline.dest},#{airline.launch},#{airline.arrival},now(),#{airline.weekdays},#{airline.via})
+        </foreach>
+    </insert>
+
+    <update id="updateFlightTimeAndVia" parameterType="java.util.List">
+        <foreach item="airline" collection="list" separator=";">
+            update airline set
+            launch = #{airline.launch}, arrival = #{airline.arrival},update_time = now(), via = #{airline.via}
+            where flight = #{airline.flight} and dest like concat('%',#{airline.dest},'%')
+        </foreach>
+    </update>
+
+    <update id="updateFlightTimeAndWeekdays" parameterType="java.util.List">
+        <foreach item="airline" collection="list" separator=";">
+            update airline set
+            launch = #{airline.launch}, arrival = #{airline.arrival},update_time = now(), weekdays = #{airline.weekdays}
+            where flight = #{airline.flight} and dest like concat('%',#{airline.dest},'%')
+        </foreach>
+    </update>
+
+</mapper>

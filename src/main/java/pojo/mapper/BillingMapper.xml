@@ -1,0 +1,66 @@
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pojo.mapper.BillingMapper">
+
+	<resultMap id="billingMap" type="pojo.Billing">
+		<id property="deliveryNo" column="delivery_no"/>
+		<id property="receiver" column="receiver"/>
+		<result property="freightCollect" column="freight_collect"/>
+		<result property="deliveryPhoneNumber" column="delivery_phone_numnber"/>
+		<result property="deliveryNo" column="delivery_no"/>
+		<result property="packagePiece" column="package_piece"/>
+		<result property="grossWeight" column="gross_weight"/>
+		<result property="chargeWeight" column="charge_weight"/>
+		<result property="productName" column="product_name"/>
+		<result property="baseRate" column="base_rate"/>
+		<result property="takeOffTime" column="take_off_time"/>
+		<result property="arrivalTime" column="arrival_time"/>
+	</resultMap>
+	 
+	<insert id="insertBilling" parameterType="billing" >
+		insert into billing values (#{date},#{dest},#{flight},#{receiver},#{tel},
+		#{weight},#{price},#{cost},#{freightCollect},#{deliveryPhoneNumber},
+		#{deliveryNo},#{packagePiece},#{grossWeight},#{chargeWeight},
+		#{baseRate},#{productName},#{remark},#{payer},#{takeOffTime},#{arrivalTime})
+	</insert>
+	
+	<select id="selectBilling" parameterType="billing" resultMap="billingMap">
+		select * from billing where delivery_no = #{deliveryNo} AND receiver = #{receiver}
+	</select>
+
+	<select id="selectBillingBetweenDateAndPayer" parameterType="java.util.HashMap" resultMap="billingMap">
+		SELECT * FROM billing
+		<where>
+			<if test="beginDate">
+				AND date >= #{beginDate}
+			</if>
+			<if test="endDate">
+				AND date &lt;= #{endDate}
+			</if>
+			<if test="payer">
+				AND payer LIKE concat('%',#{payer},'%')
+			</if>
+		</where>
+		ORDER BY payer,date
+	</select>
+
+	<update id="updateBilling" parameterType="billing">
+		update billing set
+			date = #{date},	dest = #{dest},flight=#{flight},receiver=#{receiver},tel=#{tel},weight=#{weight},
+			price=#{price},cost=#{cost},freight_collect=#{freightCollect},delivery_phone_numnber=#{deliveryPhoneNumber},
+			delivery_no=#{deliveryNo},package_piece=#{packagePiece},gross_weight=#{grossWeight},charge_weight=#{chargeWeight},
+			base_rate=#{baseRate},product_name=#{productName},remark=#{remark},payer=#{payer},take_off_time=#{takeOffTime},arrival_time=#{arrivalTime}
+		  where delivery_no = #{deliveryNo} AND receiver = #{receiver}
+	</update>
+
+	<!-- <insert id="insertAirlines" parameterType="java.util.List">
+		insert into airline values
+		<foreach item="airline" collection="list" separator=",">
+			(#{airline.flight},#{airline.company},#{airline.departure},
+			#{airline.dest},#{airline.launch},#{airline.arrival},#{airline.ICAO})
+		</foreach>
+	</insert> -->
+
+</mapper>

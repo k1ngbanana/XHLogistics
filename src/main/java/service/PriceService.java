@@ -5,9 +5,11 @@ import config.SpringBean;
 import dao.AirlineDao;
 import dao.CostPriceDao;
 import dao.LanshiPriceDao;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,6 @@ import utils.CellStyleEnum;
 import utils.POIUtils;
 
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.text.ParseException;
@@ -133,8 +134,8 @@ public class PriceService {
      * 并将"格式化价格"里面的手动设置价格更新并将flag设置为true
      */
     public void insertLanshiPrice() {
-        Workbook exteranlWb = POIUtils.getWorkBook("exteranlPrice");
-        Sheet lanshiOriginSheet = exteranlWb.getSheet("蓝氏原始价");
+        /*Workbook exteranlWb = POIUtils.getWorkBook("externalPrice");
+        Sheet lanshiOriginSheet = exteranlWb.getSheet("蓝氏原始价");*/
 
         ld.truncatePrice();
 
@@ -216,52 +217,51 @@ public class PriceService {
 
     }
 
-/*    @Test
-    public void writeUnder100Price() throws IOException {
-        Workbook lanshiWb = POIUtils.getWorkBook("costExcel");
-        Sheet lanshiSheet = lanshiWb.getSheet("蓝氏");
-        for (int i = 1; i <= lanshiSheet.getLastRowNum(); i++) {
-            CostPrice cp = new CostPrice();
-            cp.setDest(POIUtils.getCellValue(lanshiSheet.getRow(i).getCell(0)));
-            cp.setFlight(POIUtils.getCellValue(lanshiSheet.getRow(i).getCell(1)));
-            cp = selectPrice(cp);
-            if (lanshiSheet.getRow(i).getCell(7) == null) {
-                lanshiSheet.getRow(i).createCell(7, CellType.NUMERIC);
-            }
-
-            //如果45kg没有价格那么用N的价格
-            if (cp.getP45() == 0) {
-                lanshiSheet.getRow(i).getCell(7).setCellValue(cp.getN() + 0.5);
-            } else {
-                lanshiSheet.getRow(i).getCell(7).setCellValue(cp.getP45() + 0.5);
-            }
-        }
-
-        //输出文件到格式化价格.xlsx
-        FileOutputStream fos = new FileOutputStream(POIUtils.getFilePath("costExcel"));
-        lanshiWb.write(fos);
-        fos.close();
-
-    }*/
-
     @Test
-    public void writeLanshiPrice() throws IOException {
+    public void writeLanshiPrice() throws Exception {
         Workbook lanshiWb = POIUtils.getWorkBook("costExcel");
         Sheet lanshiSheet = lanshiWb.getSheet("蓝氏");
+        HashMap<String,Object> redProperties = POIUtils.getCellSytleProperties(CellStyleEnum.RED_BOLD, lanshiSheet);
+        HashMap<String,Object> blueProperties = POIUtils.getCellSytleProperties(CellStyleEnum.BLUE_BOLD, lanshiSheet);
+        HashMap<String,Object> defaultProperties = POIUtils.getCellSytleProperties(CellStyleEnum.DEFAULT, lanshiSheet);
+
         for (int i = 1; i <= lanshiSheet.getLastRowNum(); i++) {
-            if (lanshiSheet.getRow(i).getCell(8) == null) {
+            /*if (lanshiSheet.getRow(i).getCell(8) == null) {
                 lanshiSheet.getRow(i).createCell(8, CellType.NUMERIC);
-            }
+            }*/
+            POIUtils.isNullCreate(lanshiSheet, i, 7, CellType.NUMERIC);
             LanshiPrice lp = new LanshiPrice();
             lp.setDest(POIUtils.getCellValue(lanshiSheet.getRow(i).getCell(0)));
             lp.setFlight(POIUtils.getCellValue(lanshiSheet.getRow(i).getCell(1)));
 
-            lanshiSheet.getRow(i).getCell(8).setCellValue(selectPrice(lp).getBeyond100());
-            System.out.println(selectPrice(lp));
+            Cell beyondCell = lanshiSheet.getRow(i).getCell(4);
+            Cell underCell = lanshiSheet.getRow(i).getCell(7);
+            
+            lp = selectPrice(lp);
+
+            if(lp.getBeyond100()>beyondCell.getNumericCellValue()){
+                CellUtil.setCellStyleProperties(beyondCell, redProperties);
+            }else if(lp.getBeyond100()<beyondCell.getNumericCellValue()){
+                CellUtil.setCellStyleProperties(beyondCell, blueProperties);
+            }else{
+                CellUtil.setCellStyleProperties(beyondCell, defaultProperties);
+            }
+            beyondCell.setCellValue(lp.getBeyond100());
+
+            if(lp.getUnder100()>underCell.getNumericCellValue()){
+                CellUtil.setCellStyleProperties(underCell, redProperties);
+            }else if(lp.getUnder100()<underCell.getNumericCellValue()){
+                CellUtil.setCellStyleProperties(underCell, blueProperties);
+            }else{
+                CellUtil.setCellStyleProperties(underCell, defaultProperties);
+            }
+            underCell.setCellValue(lp.getUnder100());
+
+            //System.out.println(selectPrice(lp));
         }
 
         //输出文件到格式化价格.xlsx
-        FileOutputStream fos = new FileOutputStream(POIUtils.getFilePath("costExcel"));
+        FileOutputStream fos = new FileOutputStream(POIUtils.getFilePath("testExcel"));
         lanshiWb.write(fos);
         fos.close();
     }

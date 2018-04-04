@@ -1,5 +1,6 @@
 package utils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
@@ -107,9 +108,9 @@ public class POIUtils {
             if (temp.getFontName().equals("等线") && temp.getFontHeightInPoints() == 10) {
                 if (temp.getColor() == IndexedColors.RED.getIndex()) {
                     redBoldFont = temp;
-                } else if(temp.getColor() == IndexedColors.BLUE.getIndex()) {
+                } else if (temp.getColor() == IndexedColors.BLUE.getIndex()) {
                     blueBoldFont = temp;
-                } else{
+                } else {
                     defaultFont = temp;
                 }
             }
@@ -168,6 +169,76 @@ public class POIUtils {
 
     }
 
+    /**
+     * @param sheet 需要设置格式的表格
+     * @param map   Integer为需要设置的列，int[]为需要设置的行
+     * @throws Exception
+     */
+    public static HashMap<String, Object> getCellSytleProperties(CellStyleEnum cellStyleEnum, Sheet sheet) throws Exception {
+        Workbook workbook = sheet.getWorkbook();
+
+        //设置默认字体为"等线"，大小为10像素
+        Font defaultFont = null;
+        Font redBoldFont = null;
+        Font blueBoldFont = null;
+
+        for (short i = 0; i < workbook.getNumberOfFonts(); i++) {
+            //System.out.println(workbook.getFontAt(i).getColor());
+            Font temp = workbook.getFontAt(i);
+            if (temp.getFontName().equals("等线") && temp.getFontHeightInPoints() == 10) {
+                if (temp.getColor() == IndexedColors.RED.getIndex()) {
+                    redBoldFont = temp;
+                } else if (temp.getColor() == IndexedColors.BLUE.getIndex()) {
+                    blueBoldFont = temp;
+                } else {
+                    defaultFont = temp;
+                }
+            }
+
+        }
+
+        if (defaultFont == null) {
+            defaultFont = workbook.createFont();
+            defaultFont.setFontName("等线");
+            defaultFont.setFontHeightInPoints((short) 10);
+        }
+        if (redBoldFont == null) {
+            redBoldFont = workbook.createFont();
+            redBoldFont.setFontName(defaultFont.getFontName());
+            redBoldFont.setFontHeightInPoints(defaultFont.getFontHeightInPoints());
+            redBoldFont.setBold(true);
+            redBoldFont.setColor(IndexedColors.RED.getIndex());
+        }
+        if (blueBoldFont == null) {
+            blueBoldFont = workbook.createFont();
+            blueBoldFont.setFontName(defaultFont.getFontName());
+            blueBoldFont.setFontHeightInPoints(defaultFont.getFontHeightInPoints());
+            blueBoldFont.setBold(true);
+            blueBoldFont.setColor(IndexedColors.BLUE.getIndex());
+        }
+
+        //设置为水平，垂直居中对齐
+        HashMap<String, Object> defaultProperties = new HashMap<>();
+        defaultProperties.put(CellUtil.ALIGNMENT, HorizontalAlignment.CENTER);
+        defaultProperties.put(CellUtil.VERTICAL_ALIGNMENT, VerticalAlignment.CENTER);
+        defaultProperties.put(CellUtil.FONT, defaultFont.getIndex());
+
+        //设置临时属性Map
+        HashMap<String, Object> tempProperties = new HashMap<>();
+
+        tempProperties.putAll(defaultProperties);
+        switch (cellStyleEnum) {
+            case RED_BOLD:
+                tempProperties.put(CellUtil.FONT, redBoldFont.getIndex());
+                break;
+            case BLUE_BOLD:
+                tempProperties.put(CellUtil.FONT, blueBoldFont.getIndex());
+                break;
+        }
+        //用完之后清除样式
+        return  tempProperties;
+
+    }
 
     public static int getColumnNum(Properties prop, String key) {
         return Integer.parseInt(prop.getProperty(key));
@@ -182,7 +253,8 @@ public class POIUtils {
         String path = pathProp.getProperty(excelName);
         WorkbookFactory wbf = new WorkbookFactory();
         try {
-            return wbf.create(new FileInputStream(new File(path)));
+            //return wbf.create(new FileInputStream(new File(path)));
+            return wbf.create(new FileInputStream(path));
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InvalidFormatException e) {
@@ -268,7 +340,7 @@ public class POIUtils {
                     break;
                 case FORMULA:
                     FormulaEvaluator evaluator = cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator();
-                    if(evaluator.evaluate(cell).getCellTypeEnum().equals(CellType.NUMERIC)){
+                    if (evaluator.evaluate(cell).getCellTypeEnum().equals(CellType.NUMERIC)) {
                         BigDecimal bd = new BigDecimal(evaluator.evaluate(cell).getNumberValue());
                         cellValue = bd.setScale(1, BigDecimal.ROUND_HALF_UP).toString();
                         break;
@@ -337,7 +409,7 @@ public class POIUtils {
     public static void copyRow(Sheet srcSheet, Sheet destSheet, Row srcRow, Row destRow,
                                Map<Integer, CellStyle> styleMap) {
         // manage a list of merged zone in order to not insert two times a merged zone
-        Set<CellRangeAddressWrapper> mergedRegions = new TreeSet<CellRangeAddressWrapper>();
+        Set<CellRangeAddressWrapper> mergedRegions = new TreeSet<>();
         destRow.setHeight(srcRow.getHeight());
         // reckoning delta rows
         int deltaRows = destRow.getRowNum() - srcRow.getRowNum();
@@ -366,7 +438,6 @@ public class POIUtils {
                 }
 
                 if (mergedRegion != null) {
-
                     //如果两行是同一个合并单元格，那么继续
                     if (mergedRegion.equals(lastMergedRegion)) {
                         continue;
@@ -493,10 +564,11 @@ public class POIUtils {
 
     /**
      * 设置单元格Comment
-     * @param cell 需要设置的单元格
+     *
+     * @param cell      需要设置的单元格
      * @param myComment 需要设置的内容
      */
-    public static void setCellComment(Cell cell,String myComment){
+    public static void setCellComment(Cell cell, String myComment) {
         Sheet sheet = cell.getSheet();
         Workbook wb = sheet.getWorkbook();
         CreationHelper factory = wb.getCreationHelper();
@@ -506,13 +578,37 @@ public class POIUtils {
         // When the comment box is visible, have it show in a 1x3 space
         ClientAnchor anchor = factory.createClientAnchor();
         anchor.setCol1(cell.getColumnIndex());
-        anchor.setCol2(cell.getColumnIndex()+2);
+        //判断最长字符有多长，每5个字符多加一列列宽
+        String[] strs = myComment.split("\n");
+        int maxLength = 5;
+        for (String str : strs) {
+            if (maxLength < str.length()) {
+                maxLength = str.length();
+            }
+        }
+        anchor.setCol2(cell.getColumnIndex() + ((maxLength + 4) % 5));
         anchor.setRow1(cell.getRow().getRowNum());
-        anchor.setRow2(cell.getRow().getRowNum()+4);
+        //如果没有换行符，就按照一行的高度设置大小，否则就按多少个换行符设置多少行高度
+        int rowNum = 1;
+        if (StringUtils.countMatches(myComment, "\n") != 0) {
+            if (cell.getCellComment() != null) {
+                rowNum += 2;
+            }
+            rowNum += StringUtils.countMatches(myComment, "\n");
+        }
+        anchor.setRow2(cell.getRow().getRowNum() + rowNum);
 
         // Create the comment and set the text+author
-        Comment comment = drawing.createCellComment(anchor);
-        RichTextString str = factory.createRichTextString(myComment);
+        Comment comment;
+        RichTextString str;
+        //判断原来单元格是否存在comment，如果存在，那么把原来的内容添加在新comment内容后
+        if (cell.getCellComment() == null) {
+            comment = drawing.createCellComment(anchor);
+            str = factory.createRichTextString(myComment);
+        } else {
+            comment = cell.getCellComment();
+            str = factory.createRichTextString(myComment + "\n\n" + comment.getString());
+        }
         comment.setString(str);
         comment.setAuthor("banana");
 
